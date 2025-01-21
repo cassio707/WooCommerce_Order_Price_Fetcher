@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WooCommerce Orders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 p-8 transition-colors duration-200">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h1 class="dark:text-white my-4 text-3xl font-bold">WooCommerce Get Order Phone Number By Price</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <input id="siteUrl" placeholder="Site URL (e.g., https://example.com)" 
+                    class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <input id="consumerKey" placeholder="Consumer Key" 
+                    class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <input id="consumerSecret" placeholder="Consumer Secret" 
+                    class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <div class="flex gap-2">
+                    <select id="amountFilter" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="equals">Equals</option>
+                        <option value="greater">Greater Than</option>
+                        <option value="less">Less Than</option>
+                    </select>
+                    <input type="number" id="amountValue" placeholder="Amount" 
+                        class="p-2 border rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button id="fetchOrders" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Fetch Orders
+                </button>
+                <button id="exportJSON" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Export JSON
+                </button>
+                <button id="exportExcel" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                    Export Excel
+                </button>
+                <button id="toggleTheme" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                    Toggle Theme
+                </button>
+            </div>
+        </div>
+
+        <div class="relative pt-1 hidden" id="progressContainer">
+            <div class="flex mb-2 items-center justify-between">
+                <div class="text-xs font-semibold inline-block text-blue-600 dark:text-blue-400" id="progressText">
+                    Loading...
+                </div>
+            </div>
+            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900">
+                <div id="progressBar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div id="totalOrders" class="text-lg font-bold text-gray-800 dark:text-gray-200"></div>
+        <div id="ordersList" class="space-y-4"></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
