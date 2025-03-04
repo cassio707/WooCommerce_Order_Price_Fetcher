@@ -9,6 +9,7 @@ document.getElementById('fetchOrders').addEventListener('click', fetchOrders);
 document.getElementById('exportJSON').addEventListener('click', exportToJSON);
 document.getElementById('exportExcel').addEventListener('click', exportToExcel);
 document.getElementById('toggleTheme').addEventListener('click', toggleTheme);
+document.getElementById('orderStatus').addEventListener('change', fetchOrders); // Add event listener for status dropdown
 
 // Add the date filter function
 function filterOrdersByDate(orders, monthsAgo) {
@@ -64,6 +65,7 @@ async function getAllOrders() {
             
             // Apply the date filter
             const filteredOrders = filterOrdersByDate(newOrders, dateFilterValue);
+
             allOrders = [...allOrders, ...filteredOrders];
             
             updateProgress(allOrders.length, totalOrders);
@@ -107,13 +109,17 @@ async function fetchOrders() {
     const progressContainer = document.getElementById('progressContainer');
     const totalOrdersElement = document.getElementById('totalOrders');
     const ordersListElement = document.getElementById('ordersList');
+    const selectedStatus = document.getElementById('orderStatus').value; // Get the selected status
 
     try {
         progressContainer.classList.remove('hidden');
         ordersListElement.innerHTML = '';
         totalOrdersElement.innerHTML = 'Fetching orders...';
 
-        const allOrders = await getAllOrders();
+        let allOrders = await getAllOrders();
+
+        // Filter orders by status
+        allOrders = filterOrdersByStatus(allOrders, selectedStatus);
 
         totalOrdersElement.textContent = `Total Orders: ${allOrders.length}`;
 
@@ -142,7 +148,6 @@ function filterOrdersByStatus(orders, selectedStatus) {
     if (!selectedStatus) return orders;
     return orders.filter(order => order.status === selectedStatus);
 }
-
 
 // Replace the export functions
 function getOrdersData() {
