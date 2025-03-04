@@ -4,15 +4,22 @@
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const chunks = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) => arr.slice(i * size, i * size + size));
 
-// const API_URL = 'https://chelno.com/wp-json/wc/v3/orders';
-// const consumer_key = 'ck_2f23cfd27795aecdabd37720f7ab3fce30182902';
-// const consumer_secret = 'cs_31a274a6fbab41195ec15cf1f04df15928b8ae99';
-
 // Event Listeners
 document.getElementById('fetchOrders').addEventListener('click', fetchOrders);
 document.getElementById('exportJSON').addEventListener('click', exportToJSON);
 document.getElementById('exportExcel').addEventListener('click', exportToExcel);
 document.getElementById('toggleTheme').addEventListener('click', toggleTheme);
+
+// Add the date filter function
+function filterOrdersByDate(orders, monthsAgo) {
+    const today = new Date();
+    const cutoffDate = new Date(today.setMonth(today.getMonth() - monthsAgo));
+
+    return orders.filter(order => {
+        const orderDate = new Date(order.date_created);
+        return orderDate >= cutoffDate;
+    });
+}
 
 function toggleTheme() {
     document.documentElement.classList.toggle('dark');
@@ -24,29 +31,26 @@ async function getAllOrders() {
     const consumer_secret = document.getElementById('consumerSecret').value;
     const amountFilter = document.getElementById('amountFilter').value;
     const amountValue = parseFloat(document.getElementById('amountValue').value);
+    const dateFilterValue = parseInt(document.getElementById('dateFilter').value); // Get the date filter value
 
     if (!siteUrl || !consumer_key || !consumer_secret) {
         throw new Error('Please fill in all API credentials');
     }
 
     const API_URL = `${siteUrl}/wp-json/wc/v3/orders`;
-    const BATCH_SIZE = 10; // Increased parallel requests
+    const BATCH_SIZE = 10;
     const PER_PAGE = 100;
     let allOrders = [];
 
     try {
-        // Get total count
         const countResponse = await fetch(`${API_URL}?consumer_key=${consumer_key}&consumer_secret=${consumer_secret}`);
         const totalOrders = parseInt(countResponse.headers.get('X-WP-Total')) || 0;
         const totalPages = Math.ceil(totalOrders / PER_PAGE);
-        
-        // Create array of page numbers
         const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
         const pageChunks = chunks(pageNumbers, BATCH_SIZE);
 
         updateProgress(0, totalOrders);
 
-        // Process chunks of pages in parallel
         for (const chunk of pageChunks) {
             const promises = chunk.map(page => 
                 fetch(`${API_URL}?consumer_key=${consumer_key}&consumer_secret=${consumer_secret}&page=${page}&per_page=${PER_PAGE}`)
@@ -54,11 +58,16 @@ async function getAllOrders() {
             );
 
             const results = await Promise.all(promises);
-            const newOrders = results.flat().filter(order => filterOrderByAmount(order, amountFilter, amountValue));
-            allOrders = [...allOrders, ...newOrders];
+            const newOrders = results.flat().filter(order => 
+                filterOrderByAmount(order, amountFilter, amountValue)
+            );
+            
+            // Apply the date filter
+            const filteredOrders = filterOrdersByDate(newOrders, dateFilterValue);
+            allOrders = [...allOrders, ...filteredOrders];
             
             updateProgress(allOrders.length, totalOrders);
-            await sleep(100); // Prevent rate limiting
+            await sleep(100);
         }
 
         return allOrders;
@@ -128,6 +137,13 @@ async function fetchOrders() {
     }
 }
 
+// فیلتر بر اساس وضعیت سفارش
+function filterOrdersByStatus(orders, selectedStatus) {
+    if (!selectedStatus) return orders;
+    return orders.filter(order => order.status === selectedStatus);
+}
+
+
 // Replace the export functions
 function getOrdersData() {
     const orders = Array.from(document.getElementById('ordersList').children).map(div => {
@@ -135,10 +151,13 @@ function getOrdersData() {
         const amountElem = div.querySelector('.text-gray-800.dark\\:text-gray-200 p:nth-child(2)');
         const phoneElem = div.querySelector('.text-gray-800.dark\\:text-gray-200 p:nth-child(3)');
 
+        const orderDate = new Date().toISOString().split('T')[0]; // Adding current date to each order
+        
         return {
             name: nameElem ? nameElem.textContent.replace('Name: ', '') : '',
             amount: amountElem ? parseFloat(amountElem.textContent.replace('Amount: $', '')) : 0,
-            phone: phoneElem ? phoneElem.textContent.replace('Phone: ', '') : ''
+            phone: phoneElem ? phoneElem.textContent.replace('Phone: ', '') : '',
+            date: orderDate // Include the date field
         };
     });
     return orders;

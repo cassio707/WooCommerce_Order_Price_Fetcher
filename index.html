@@ -39,6 +39,23 @@
                     <input type="number" id="amountValue" placeholder="Amount" 
                         class="p-2 border rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 </div>
+                <select id="dateFilter" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="1">1 ماه پیش</option>
+                    <option value="3">3 ماه پیش</option>
+                    <option value="6">6 ماه پیش</option>
+                    <option value="12">1 سال پیش</option>
+                </select>
+                <div class="flex gap-2 w-full">
+                    <select id="orderStatus" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white w-full">
+                        <option value="">All Status</option>
+                        <option value="completed">Completed</option>
+                        <option value="processing">Processing</option>
+                        <option value="on-hold">On Hold</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                
             </div>
 
             <div class="flex gap-4">
