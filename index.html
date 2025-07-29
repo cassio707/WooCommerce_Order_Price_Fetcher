@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,37 +20,41 @@
         }
     </script>
 </head>
+
 <body class="bg-gray-100 dark:bg-gray-900 p-8 transition-colors duration-200">
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
             <h1 class="dark:text-white my-4 text-3xl font-bold">WooCommerce Orders Manager</h1>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <input id="siteUrl" placeholder="Site URL (e.g., https://example.com)" 
+                <input id="siteUrl" placeholder="Site URL (e.g., https://example.com)"
                     class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <input id="consumerKey" placeholder="Consumer Key" 
+                <input id="consumerKey" placeholder="Consumer Key"
                     class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <input id="consumerSecret" placeholder="Consumer Secret" 
+                <input id="consumerSecret" placeholder="Consumer Secret"
                     class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <input id="cityFilter" placeholder="Filter by City (e.g., New York)" 
+                <input id="cityFilter" placeholder="Filter by City (e.g., New York)"
                     class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 <div class="flex gap-2">
-                    <select id="amountFilter" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <select id="amountFilter"
+                        class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <option value="all">All Amounts</option>
                         <option value="equals">Equals</option>
                         <option value="greater">Greater Than</option>
                         <option value="less">Less Than</option>
                     </select>
-                    <input type="number" id="amountValue" placeholder="Amount" 
+                    <input type="number" id="amountValue" placeholder="Amount"
                         class="p-2 border rounded flex-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 </div>
-                <select id="dateFilter" class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select id="dateFilter"
+                    class="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="1">Last 1 Month</option>
                     <option value="3">Last 3 Months</option>
                     <option value="6">Last 6 Months</option>
                     <option value="12">Last 1 Year</option>
                     <option value="24">Last 2 Years</option>
                 </select>
-                <select id="orderStatus" class="p-2 border col-span-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <select id="orderStatus"
+                    class="p-2 border col-span-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="">All Status</option>
                     <option value="completed">Completed</option>
                     <option value="processing">Processing</option>
@@ -62,19 +67,24 @@
             </div>
 
             <div class="flex gap-4 flex-wrap">
-                <button id="fetchOrders" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                <button id="fetchOrders"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
                     Fetch Orders
                 </button>
-                <button id="exportJSON" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                <button id="exportJSON"
+                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors">
                     Export JSON
                 </button>
-                <button id="exportExcel" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                <button id="exportExcel"
+                    class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors">
                     Export Excel
                 </button>
-                <button id="toggleTheme" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                <button id="toggleTheme"
+                    class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors">
                     Toggle Theme
                 </button>
-                <button id="clearFilters" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                <button id="clearFilters"
+                    class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors">
                     Clear Filters
                 </button>
             </div>
@@ -90,14 +100,35 @@
                 </div>
             </div>
             <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900">
-                <div id="progressBar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-200" style="width: 0%"></div>
+                <div id="progressBar"
+                    class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-200"
+                    style="width: 0%"></div>
             </div>
         </div>
 
         <div id="totalOrders" class="text-lg font-bold text-gray-800 dark:text-gray-200"></div>
         <div id="ordersList" class="space-y-4"></div>
     </div>
-    <script src="app.js"></script>
 
+    <!-- Cart Items Modal -->
+    <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white dark:bg-gray-800 p-6 border-b dark:border-gray-700">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200" id="modalTitle">Cart Items</h2>
+                    <button id="closeModal"
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">
+                        ×
+                    </button>
+                </div>
+            </div>
+            <div id="cartItemsContent" class="p-6">
+                <!-- Cart items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
+
 </html>

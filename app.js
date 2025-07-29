@@ -27,7 +27,11 @@ const elements = {
     progressText: document.getElementById('progressText'),
     progressPercent: document.getElementById('progressPercent'),
     totalOrders: document.getElementById('totalOrders'),
-    ordersList: document.getElementById('ordersList')
+    ordersList: document.getElementById('ordersList'),
+    cartModal: document.getElementById('cartModal'),
+    modalTitle: document.getElementById('modalTitle'),
+    cartItemsContent: document.getElementById('cartItemsContent'),
+    closeModal: document.getElementById('closeModal')
 };
 
 // Store all orders for client-side filtering
@@ -39,6 +43,14 @@ document.getElementById('exportJSON').addEventListener('click', exportToJSON);
 document.getElementById('exportExcel').addEventListener('click', exportToExcel);
 document.getElementById('toggleTheme').addEventListener('click', toggleTheme);
 document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+// Modal event listeners
+elements.closeModal.addEventListener('click', closeCartModal);
+elements.cartModal.addEventListener('click', (e) => {
+    if (e.target === elements.cartModal) {
+        closeCartModal();
+    }
+});
 
 // Add real-time filtering
 elements.cityFilter.addEventListener('input', debounce(applyFilters, 300));
@@ -60,18 +72,88 @@ function clearFilters() {
     applyFilters();
 }
 
-function updateProgress(current, total) {
+function updateProgress(current, total, message = null) {
     elements.progressContainer.classList.remove('hidden');
 
     if (total > 0) {
         const percentage = Math.round((current / total) * 100);
         elements.progressBar.style.width = `${percentage}%`;
-        elements.progressText.textContent = `Processing: ${current} of ${total} orders`;
+        elements.progressText.textContent = message || `Processing: ${current} of ${total} orders`;
         elements.progressPercent.textContent = `${percentage}%`;
     } else {
-        elements.progressText.textContent = `Retrieved: ${current} orders`;
+        elements.progressText.textContent = message || `Retrieved: ${current} orders`;
         elements.progressPercent.textContent = '0%';
     }
+}
+
+// Modal functions
+function openCartModal(orderId, customerName, cartItems) {
+    elements.modalTitle.textContent = `Cart Items - Order #${orderId} (${customerName})`;
+    elements.cartItemsContent.innerHTML = renderCartItems(cartItems);
+    elements.cartModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCartModal() {
+    elements.cartModal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+function renderCartItems(items) {
+    if (!items || items.length === 0) {
+        return '<p class="text-gray-500 dark:text-gray-400 text-center py-8">No items found in this order.</p>';
+    }
+
+    return items.map(item => `
+        <div class="border dark:border-gray-700 rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-700">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-200">${item.name}</h3>
+                <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">ID: ${item.product_id}</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                <div>
+                    <span class="font-medium text-gray-600 dark:text-gray-400">Quantity:</span>
+                    <span class="text-gray-800 dark:text-gray-200">${item.quantity}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600 dark:text-gray-400">Unit Price:</span>
+                    <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.price || 0).toFixed(2)}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-600 dark:text-gray-400">Total:</span>
+                    <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.total || 0).toFixed(2)}</span>
+                </div>
+                ${item.sku ? `
+                <div>
+                    <span class="font-medium text-gray-600 dark:text-gray-400">SKU:</span>
+                    <span class="text-gray-800 dark:text-gray-200">${item.sku}</span>
+                </div>
+                ` : ''}
+                ${item.variation_id && item.variation_id !== 0 ? `
+                <div>
+                    <span class="font-medium text-gray-600 dark:text-gray-400">Variation ID:</span>
+                    <span class="text-gray-800 dark:text-gray-200">${item.variation_id}</span>
+                </div>
+                ` : ''}
+            </div>
+            ${item.meta_data && item.meta_data.length > 0 ? `
+                <div class="mt-3 pt-3 border-t dark:border-gray-600">
+                    <h4 class="font-medium text-gray-600 dark:text-gray-400 mb-2">Additional Information:</h4>
+                    <div class="space-y-1">
+                        ${item.meta_data.map(meta => {
+                            if (meta.display_key && meta.display_value) {
+                                return `<div class="text-sm">
+                                    <span class="font-medium">${meta.display_key}:</span>
+                                    <span class="text-gray-800 dark:text-gray-200">${meta.display_value}</span>
+                                </div>`;
+                            }
+                            return '';
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
 }
 
 // Optimized API fetching with proper error handling
@@ -115,8 +197,10 @@ async function getAllOrders() {
             if (orders.length === 0) {
                 hasMore = false;
             } else {
-                allOrders = [...allOrders, ...orders];
-                updateProgress(allOrders.length, null);
+                // Process orders and fetch line items
+                const processedOrders = await processOrdersWithItems(orders, page);
+                allOrders = [...allOrders, ...processedOrders];
+                updateProgress(allOrders.length, null, `Retrieved: ${allOrders.length} orders with cart items`);
                 page++;
 
                 // Rate limiting
@@ -135,6 +219,27 @@ async function getAllOrders() {
         console.error('Error fetching orders:', error);
         throw error;
     }
+}
+
+// Process orders and add line items
+async function processOrdersWithItems(orders, pageNum) {
+    const processedOrders = [];
+    
+    for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        updateProgress(i + 1, orders.length, `Page ${pageNum}: Processing order ${i + 1}/${orders.length}`);
+        
+        // Add line items to order object
+        order.line_items = order.line_items || [];
+        processedOrders.push(order);
+        
+        // Small delay to prevent overwhelming the API
+        if (i % 10 === 0 && i > 0) {
+            await sleep(50);
+        }
+    }
+    
+    return processedOrders;
 }
 
 // Optimized filtering functions
@@ -207,24 +312,41 @@ function createOrderElement(order) {
 
     const orderDate = new Date(order.date_created).toLocaleDateString();
     const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+    const customerName = `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim();
+    const itemsCount = order.line_items ? order.line_items.length : 0;
 
     orderDiv.innerHTML = `
-                <div class="text-gray-800 dark:text-gray-200">
-                    <div class="flex justify-between items-start mb-2">
-                        <p class="font-bold text-lg">Name: ${order.billing?.first_name || ''} ${order.billing?.last_name || ''}</p>
-                        <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Order #${order.id}</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        <p><span class="font-medium">Amount:</span> $${parseFloat(order.total).toFixed(2)}</p>
-                        <p><span class="font-medium">Phone:</span> ${order.billing?.phone || 'Not provided'}</p>
-                        <p><span class="font-medium">City:</span> ${order.billing?.city || 'Not provided'}</p>
-                        <p><span class="font-medium">State:</span> ${order.billing?.state || 'Not provided'}</p>
-                        <p><span class="font-medium">Date:</span> ${orderDate}</p>
-                        <p><span class="font-medium">Status:</span> ${statusText}</p>
-                    </div>
-                    ${order.billing?.address_1 ? `<p class="mt-2 text-sm"><span class="font-medium">Address:</span> ${order.billing.address_1}</p>` : ''}
-                </div>
-            `;
+        <div class="text-gray-800 dark:text-gray-200">
+            <div class="flex justify-between items-start mb-2">
+                <p class="font-bold text-lg">Name: ${customerName}</p>
+                <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Order #${order.id}</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                <p><span class="font-medium">Amount:</span> $${parseFloat(order.total).toFixed(2)}</p>
+                <p><span class="font-medium">Phone:</span> ${order.billing?.phone || 'Not provided'}</p>
+                <p><span class="font-medium">City:</span> ${order.billing?.city || 'Not provided'}</p>
+                <p><span class="font-medium">State:</span> ${order.billing?.state || 'Not provided'}</p>
+                <p><span class="font-medium">Date:</span> ${orderDate}</p>
+                <p><span class="font-medium">Status:</span> ${statusText}</p>
+                <p><span class="font-medium">Items:</span> ${itemsCount} item${itemsCount !== 1 ? 's' : ''}</p>
+            </div>
+            ${order.billing?.address_1 ? `<p class="mt-2 text-sm"><span class="font-medium">Address:</span> ${order.billing.address_1}</p>` : ''}
+            <div class="mt-3 pt-3 border-t dark:border-gray-600">
+                <button class="view-cart-btn bg-indigo-500 hover:bg-indigo-700 text-white text-xs font-bold py-1 px-3 rounded transition-colors" 
+                        data-order-id="${order.id}" 
+                        data-customer-name="${customerName}">
+                    View Cart Items (${itemsCount})
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Add event listener for cart items button
+    const viewCartBtn = orderDiv.querySelector('.view-cart-btn');
+    viewCartBtn.addEventListener('click', () => {
+        openCartModal(order.id, customerName, order.line_items || []);
+    });
+
     return orderDiv;
 }
 
@@ -260,7 +382,11 @@ function getDisplayedOrdersData() {
         const state = textElements[3].textContent.replace('State: ', '');
         const date = textElements[4].textContent.replace('Date: ', '');
         const status = textElements[5].textContent.replace('Status: ', '');
+        const items = textElements[6].textContent.replace('Items: ', '');
 
+        // Find the corresponding order data for cart items
+        const orderData = allOrdersData.find(order => order.id.toString() === orderId);
+        
         return {
             orderId,
             name,
@@ -269,7 +395,9 @@ function getDisplayedOrdersData() {
             city,
             state,
             date,
-            status
+            status,
+            items,
+            cartItems: orderData ? orderData.line_items : []
         };
     });
 }
@@ -292,11 +420,97 @@ function exportToExcel() {
         return;
     }
 
-    const ws = XLSX.utils.json_to_sheet(orders);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Orders');
+    // Create main orders sheet with cart items included
+    const ordersData = orders.map(order => {
+        // Create a string of cart items with names and quantities
+        let cartItemsString = '';
+        if (order.cartItems && order.cartItems.length > 0) {
+            cartItemsString = order.cartItems.map(item => 
+                `${item.name} (${item.quantity}x)`
+            ).join(' | ');
+        }
 
-    XLSX.writeFile(wb, 'woocommerce_orders.xlsx');
+        return {
+            'Order ID': order.orderId,
+            'Customer Name': order.name,
+            'Amount': `${order.amount}`,
+            'Phone': order.phone,
+            'City': order.city,
+            'State': order.state,
+            'Date': order.date,
+            'Status': order.status,
+            'Items Count': order.items.replace(' items', '').replace(' item', ''),
+            'Cart Items (Name & Quantity)': cartItemsString || 'No items'
+        };
+    });
+
+    // Create detailed cart items sheet
+    const cartItemsData = [];
+    orders.forEach(order => {
+        if (order.cartItems && order.cartItems.length > 0) {
+            order.cartItems.forEach(item => {
+                cartItemsData.push({
+                    'Order ID': order.orderId,
+                    'Customer Name': order.name,
+                    'Product ID': item.product_id,
+                    'Product Name': item.name,
+                    'Quantity': item.quantity,
+                    'Unit Price': `${parseFloat(item.price || 0).toFixed(2)}`,
+                    'Total Price': `${parseFloat(item.total || 0).toFixed(2)}`,
+                    'SKU': item.sku || 'N/A',
+                    'Variation ID': item.variation_id && item.variation_id !== 0 ? item.variation_id : 'N/A'
+                });
+            });
+        }
+    });
+
+    const wb = XLSX.utils.book_new();
+    
+    // Add orders sheet with cart items summary
+    const ordersWS = XLSX.utils.json_to_sheet(ordersData);
+    
+    // Auto-size columns for better readability
+    const ordersRange = XLSX.utils.decode_range(ordersWS['!ref']);
+    const ordersColWidths = [];
+    for (let C = ordersRange.s.c; C <= ordersRange.e.c; ++C) {
+        let maxWidth = 10;
+        for (let R = ordersRange.s.r; R <= ordersRange.e.r; ++R) {
+            const cell = ordersWS[XLSX.utils.encode_cell({r: R, c: C})];
+            if (cell && cell.v) {
+                const cellLength = cell.v.toString().length;
+                maxWidth = Math.max(maxWidth, Math.min(cellLength + 2, 50));
+            }
+        }
+        ordersColWidths.push({wch: maxWidth});
+    }
+    ordersWS['!cols'] = ordersColWidths;
+    
+    XLSX.utils.book_append_sheet(wb, ordersWS, 'Orders Summary');
+    
+    // Add detailed cart items sheet
+    if (cartItemsData.length > 0) {
+        const cartItemsWS = XLSX.utils.json_to_sheet(cartItemsData);
+        
+        // Auto-size columns for cart items sheet
+        const cartRange = XLSX.utils.decode_range(cartItemsWS['!ref']);
+        const cartColWidths = [];
+        for (let C = cartRange.s.c; C <= cartRange.e.c; ++C) {
+            let maxWidth = 10;
+            for (let R = cartRange.s.r; R <= cartRange.e.r; ++R) {
+                const cell = cartItemsWS[XLSX.utils.encode_cell({r: R, c: C})];
+                if (cell && cell.v) {
+                    const cellLength = cell.v.toString().length;
+                    maxWidth = Math.max(maxWidth, Math.min(cellLength + 2, 40));
+                }
+            }
+            cartColWidths.push({wch: maxWidth});
+        }
+        cartItemsWS['!cols'] = cartColWidths;
+        
+        XLSX.utils.book_append_sheet(wb, cartItemsWS, 'Detailed Cart Items');
+    }
+
+    XLSX.writeFile(wb, 'woocommerce_orders_with_items.xlsx');
 }
 
 function downloadFile(content, type, filename) {
@@ -320,4 +534,11 @@ if (localStorage.getItem('theme') === 'light') {
 document.getElementById('toggleTheme').addEventListener('click', () => {
     const isDark = document.documentElement.classList.contains('dark');
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !elements.cartModal.classList.contains('hidden')) {
+        closeCartModal();
+    }
 });
