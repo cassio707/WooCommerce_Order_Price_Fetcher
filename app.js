@@ -206,12 +206,6 @@ async function getAllOrders() {
                 // Rate limiting
                 await sleep(100);
             }
-
-            // Safety check to prevent infinite loops
-            if (page > 100) {
-                console.warn('Too many pages, stopping fetch');
-                break;
-            }
         }
 
         return allOrders;
