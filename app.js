@@ -20,6 +20,10 @@ const elements = {
     amountFilter: document.getElementById('amountFilter'),
     amountValue: document.getElementById('amountValue'),
     dateFilter: document.getElementById('dateFilter'),
+    dateFilterType: document.getElementById('dateFilterType'),
+    startDate: document.getElementById('startDate'),
+    endDate: document.getElementById('endDate'),
+    customDateRange: document.getElementById('customDateRange'),
     orderStatus: document.getElementById('orderStatus'),
     cityFilter: document.getElementById('cityFilter'),
     progressContainer: document.getElementById('progressContainer'),
@@ -59,6 +63,30 @@ elements.amountValue.addEventListener('input', debounce(applyFilters, 300));
 elements.orderStatus.addEventListener('change', applyFilters);
 elements.dateFilter.addEventListener('change', applyFilters);
 
+// New date range event listeners
+elements.dateFilterType.addEventListener('change', toggleDateRangeInputs);
+elements.startDate.addEventListener('change', applyFilters);
+elements.endDate.addEventListener('change', applyFilters);
+
+// Function to toggle between preset and custom date ranges
+function toggleDateRangeInputs() {
+    const isCustom = elements.dateFilterType.value === 'custom';
+    elements.customDateRange.classList.toggle('hidden', !isCustom);
+    elements.dateFilter.classList.toggle('hidden', isCustom);
+
+    if (isCustom) {
+        // Set default dates (last 30 days)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+
+        elements.endDate.value = endDate.toISOString().split('T')[0];
+        elements.startDate.value = startDate.toISOString().split('T')[0];
+    }
+
+    applyFilters();
+}
+
 function toggleTheme() {
     document.documentElement.classList.toggle('dark');
 }
@@ -68,7 +96,12 @@ function clearFilters() {
     elements.amountFilter.value = 'all';
     elements.amountValue.value = '';
     elements.orderStatus.value = '';
+    elements.dateFilterType.value = 'preset';
     elements.dateFilter.value = '12';
+    elements.startDate.value = '';
+    elements.endDate.value = '';
+    elements.customDateRange.classList.add('hidden');
+    elements.dateFilter.classList.remove('hidden');
     applyFilters();
 }
 
@@ -105,74 +138,87 @@ function renderCartItems(items) {
     }
 
     return items.map(item => `
-        <div class="border dark:border-gray-700 rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-700">
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-200">${item.name}</h3>
-                <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">ID: ${item.product_id}</span>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                <div>
-                    <span class="font-medium text-gray-600 dark:text-gray-400">Quantity:</span>
-                    <span class="text-gray-800 dark:text-gray-200">${item.quantity}</span>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-600 dark:text-gray-400">Unit Price:</span>
-                    <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.price || 0).toFixed(2)}</span>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-600 dark:text-gray-400">Total:</span>
-                    <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.total || 0).toFixed(2)}</span>
-                </div>
-                ${item.sku ? `
-                <div>
-                    <span class="font-medium text-gray-600 dark:text-gray-400">SKU:</span>
-                    <span class="text-gray-800 dark:text-gray-200">${item.sku}</span>
-                </div>
-                ` : ''}
-                ${item.variation_id && item.variation_id !== 0 ? `
-                <div>
-                    <span class="font-medium text-gray-600 dark:text-gray-400">Variation ID:</span>
-                    <span class="text-gray-800 dark:text-gray-200">${item.variation_id}</span>
-                </div>
-                ` : ''}
-            </div>
-            ${item.meta_data && item.meta_data.length > 0 ? `
-                <div class="mt-3 pt-3 border-t dark:border-gray-600">
-                    <h4 class="font-medium text-gray-600 dark:text-gray-400 mb-2">Additional Information:</h4>
-                    <div class="space-y-1">
-                        ${item.meta_data.map(meta => {
-                            if (meta.display_key && meta.display_value) {
-                                return `<div class="text-sm">
-                                    <span class="font-medium">${meta.display_key}:</span>
-                                    <span class="text-gray-800 dark:text-gray-200">${meta.display_value}</span>
-                                </div>`;
-                            }
-                            return '';
-                        }).join('')}
-                    </div>
-                </div>
-            ` : ''}
-        </div>
-    `).join('');
+ <div class="border dark:border-gray-700 rounded-lg p-4 mb-4 bg-gray-50 dark:bg-gray-700">
+ <div class="flex justify-between items-start mb-2">
+ <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-200">${item.name}</h3>
+ <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">ID: ${item.product_id}</span>
+ </div>
+ <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+ <div>
+ <span class="font-medium text-gray-600 dark:text-gray-400">Quantity:</span>
+ <span class="text-gray-800 dark:text-gray-200">${item.quantity}</span>
+ </div>
+ <div>
+ <span class="font-medium text-gray-600 dark:text-gray-400">Unit Price:</span>
+ <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.price || 0).toFixed(2)}</span>
+ </div>
+ <div>
+ <span class="font-medium text-gray-600 dark:text-gray-400">Total:</span>
+ <span class="text-gray-800 dark:text-gray-200">$${parseFloat(item.total || 0).toFixed(2)}</span>
+ </div>
+ ${item.sku ? `
+ <div>
+ <span class="font-medium text-gray-600 dark:text-gray-400">SKU:</span>
+ <span class="text-gray-800 dark:text-gray-200">${item.sku}</span>
+ </div>
+ ` : ''}
+ ${item.variation_id && item.variation_id !== 0 ? `
+ <div>
+ <span class="font-medium text-gray-600 dark:text-gray-400">Variation ID:</span>
+ <span class="text-gray-800 dark:text-gray-200">${item.variation_id}</span>
+ </div>
+ ` : ''}
+ </div>
+ ${item.meta_data && item.meta_data.length > 0 ? `
+ <div class="mt-3 pt-3 border-t dark:border-gray-600">
+ <h4 class="font-medium text-gray-600 dark:text-gray-400 mb-2">Additional Information:</h4>
+ <div class="space-y-1">
+ ${item.meta_data.map(meta => {
+        if (meta.display_key && meta.display_value) {
+            return `<div class="text-sm">
+ <span class="font-medium">${meta.display_key}:</span>
+ <span class="text-gray-800 dark:text-gray-200">${meta.display_value}</span>
+ </div>`;
+        }
+        return '';
+    }).join('')}
+ </div>
+ </div>
+ ` : ''}
+ </div>
+ `).join('');
 }
 
-// Optimized API fetching with proper error handling
+// Updated API fetching with custom date range support
 async function getAllOrders() {
-    const { siteUrl, consumerKey, consumerSecret, dateFilter } = elements;
+    const { siteUrl, consumerKey, consumerSecret, dateFilterType, dateFilter, startDate, endDate } = elements;
 
     if (!siteUrl.value || !consumerKey.value || !consumerSecret.value) {
         throw new Error('Please fill in all API credentials');
     }
 
     const API_URL = `${siteUrl.value.replace(/\/$/, '')}/wp-json/wc/v3/orders`;
-    const PER_PAGE = 50; // Reduced for better performance
+    const PER_PAGE = 50;
     let page = 1;
     let allOrders = [];
     let hasMore = true;
 
     // Calculate date filter for API
-    const dateAfter = new Date();
-    dateAfter.setMonth(dateAfter.getMonth() - parseInt(dateFilter.value));
+    let dateAfter, dateBefore;
+
+    if (dateFilterType.value === 'custom') {
+        if (startDate.value && endDate.value) {
+            dateAfter = new Date(startDate.value);
+            dateBefore = new Date(endDate.value);
+            dateBefore.setHours(23, 59, 59, 999); // End of day
+        } else {
+            throw new Error('Please select both start and end dates for custom range');
+        }
+    } else {
+        dateAfter = new Date();
+        dateAfter.setMonth(dateAfter.getMonth() - parseInt(dateFilter.value));
+        dateBefore = new Date(); // Current date
+    }
 
     try {
         while (hasMore) {
@@ -182,6 +228,7 @@ async function getAllOrders() {
                 per_page: PER_PAGE,
                 page: page,
                 after: dateAfter.toISOString(),
+                before: dateBefore.toISOString(),
                 orderby: 'date',
                 order: 'desc'
             });
@@ -197,13 +244,10 @@ async function getAllOrders() {
             if (orders.length === 0) {
                 hasMore = false;
             } else {
-                // Process orders and fetch line items
                 const processedOrders = await processOrdersWithItems(orders, page);
                 allOrders = [...allOrders, ...processedOrders];
                 updateProgress(allOrders.length, null, `Retrieved: ${allOrders.length} orders with cart items`);
                 page++;
-
-                // Rate limiting
                 await sleep(100);
             }
         }
@@ -218,21 +262,19 @@ async function getAllOrders() {
 // Process orders and add line items
 async function processOrdersWithItems(orders, pageNum) {
     const processedOrders = [];
-    
+
     for (let i = 0; i < orders.length; i++) {
         const order = orders[i];
         updateProgress(i + 1, orders.length, `Page ${pageNum}: Processing order ${i + 1}/${orders.length}`);
-        
-        // Add line items to order object
+
         order.line_items = order.line_items || [];
         processedOrders.push(order);
-        
-        // Small delay to prevent overwhelming the API
+
         if (i % 10 === 0 && i > 0) {
             await sleep(50);
         }
     }
-    
+
     return processedOrders;
 }
 
@@ -251,13 +293,28 @@ function filterOrderByAmount(order, filterType, value) {
     }
 }
 
-function filterOrdersByDate(orders, monthsAgo) {
-    const cutoffDate = new Date();
-    cutoffDate.setMonth(cutoffDate.getMonth() - monthsAgo);
+// Updated filterOrdersByDate function to handle custom date ranges
+function filterOrdersByDate(orders) {
+    const { dateFilterType, dateFilter, startDate, endDate } = elements;
+
+    let startFilterDate, endFilterDate;
+
+    if (dateFilterType.value === 'custom') {
+        if (!startDate.value || !endDate.value) {
+            return orders; // Return all if custom dates not set
+        }
+        startFilterDate = new Date(startDate.value);
+        endFilterDate = new Date(endDate.value);
+        endFilterDate.setHours(23, 59, 59, 999); // End of day
+    } else {
+        endFilterDate = new Date();
+        startFilterDate = new Date();
+        startFilterDate.setMonth(startFilterDate.getMonth() - parseInt(dateFilter.value));
+    }
 
     return orders.filter(order => {
         const orderDate = new Date(order.date_created);
-        return orderDate >= cutoffDate;
+        return orderDate >= startFilterDate && orderDate <= endFilterDate;
     });
 }
 
@@ -282,7 +339,7 @@ function applyFilters() {
     // Apply all filters
     filteredOrders = filterOrdersByCity(filteredOrders, elements.cityFilter.value);
     filteredOrders = filterOrdersByStatus(filteredOrders, elements.orderStatus.value);
-    filteredOrders = filterOrdersByDate(filteredOrders, parseInt(elements.dateFilter.value));
+    filteredOrders = filterOrdersByDate(filteredOrders);
     filteredOrders = filteredOrders.filter(order =>
         filterOrderByAmount(order, elements.amountFilter.value, elements.amountValue.value)
     );
@@ -310,30 +367,30 @@ function createOrderElement(order) {
     const itemsCount = order.line_items ? order.line_items.length : 0;
 
     orderDiv.innerHTML = `
-        <div class="text-gray-800 dark:text-gray-200">
-            <div class="flex justify-between items-start mb-2">
-                <p class="font-bold text-lg">Name: ${customerName}</p>
-                <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Order #${order.id}</span>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                <p><span class="font-medium">Amount:</span> $${parseFloat(order.total).toFixed(2)}</p>
-                <p><span class="font-medium">Phone:</span> ${order.billing?.phone || 'Not provided'}</p>
-                <p><span class="font-medium">City:</span> ${order.billing?.city || 'Not provided'}</p>
-                <p><span class="font-medium">State:</span> ${order.billing?.state || 'Not provided'}</p>
-                <p><span class="font-medium">Date:</span> ${orderDate}</p>
-                <p><span class="font-medium">Status:</span> ${statusText}</p>
-                <p><span class="font-medium">Items:</span> ${itemsCount} item${itemsCount !== 1 ? 's' : ''}</p>
-            </div>
-            ${order.billing?.address_1 ? `<p class="mt-2 text-sm"><span class="font-medium">Address:</span> ${order.billing.address_1}</p>` : ''}
-            <div class="mt-3 pt-3 border-t dark:border-gray-600">
-                <button class="view-cart-btn bg-indigo-500 hover:bg-indigo-700 text-white text-xs font-bold py-1 px-3 rounded transition-colors" 
-                        data-order-id="${order.id}" 
-                        data-customer-name="${customerName}">
-                    View Cart Items (${itemsCount})
-                </button>
-            </div>
-        </div>
-    `;
+ <div class="text-gray-800 dark:text-gray-200">
+ <div class="flex justify-between items-start mb-2">
+ <p class="font-bold text-lg">Name: ${customerName}</p>
+ <span class="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Order #${order.id}</span>
+ </div>
+ <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+ <p><span class="font-medium">Amount:</span> $${parseFloat(order.total).toFixed(2)}</p>
+ <p><span class="font-medium">Phone:</span> ${order.billing?.phone || 'Not provided'}</p>
+ <p><span class="font-medium">City:</span> ${order.billing?.city || 'Not provided'}</p>
+ <p><span class="font-medium">State:</span> ${order.billing?.state || 'Not provided'}</p>
+ <p><span class="font-medium">Date:</span> ${orderDate}</p>
+ <p><span class="font-medium">Status:</span> ${statusText}</p>
+ <p><span class="font-medium">Items:</span> ${itemsCount} item${itemsCount !== 1 ? 's' : ''}</p>
+ </div>
+ ${order.billing?.address_1 ? `<p class="mt-2 text-sm"><span class="font-medium">Address:</span> ${order.billing.address_1}</p>` : ''}
+ <div class="mt-3 pt-3 border-t dark:border-gray-600">
+ <button class="view-cart-btn bg-indigo-500 hover:bg-indigo-700 text-white text-xs font-bold py-1 px-3 rounded transition-colors" 
+ data-order-id="${order.id}" 
+ data-customer-name="${customerName}">
+ View Cart Items (${itemsCount})
+ </button>
+ </div>
+ </div>
+ `;
 
     // Add event listener for cart items button
     const viewCartBtn = orderDiv.querySelector('.view-cart-btn');
@@ -365,7 +422,7 @@ function getDisplayedOrdersData() {
     return Array.from(elements.ordersList.children).map(div => {
         const nameElement = div.querySelector('.font-bold');
         const orderIdElement = div.querySelector('.bg-blue-100, .dark\\:bg-blue-900');
-        const textElements = Array.from(div.querySelectorAll('p')).slice(1); // Skip the name element
+        const textElements = Array.from(div.querySelectorAll('p')).slice(1);
 
         const name = nameElement.textContent.replace('Name: ', '');
         const orderId = orderIdElement.textContent.replace('Order #', '');
@@ -378,9 +435,8 @@ function getDisplayedOrdersData() {
         const status = textElements[5].textContent.replace('Status: ', '');
         const items = textElements[6].textContent.replace('Items: ', '');
 
-        // Find the corresponding order data for cart items
         const orderData = allOrdersData.find(order => order.id.toString() === orderId);
-        
+
         return {
             orderId,
             name,
@@ -414,12 +470,10 @@ function exportToExcel() {
         return;
     }
 
-    // Create main orders sheet with cart items included
     const ordersData = orders.map(order => {
-        // Create a string of cart items with names and quantities
         let cartItemsString = '';
         if (order.cartItems && order.cartItems.length > 0) {
-            cartItemsString = order.cartItems.map(item => 
+            cartItemsString = order.cartItems.map(item =>
                 `${item.name} (${item.quantity}x)`
             ).join(' | ');
         }
@@ -438,7 +492,6 @@ function exportToExcel() {
         };
     });
 
-    // Create detailed cart items sheet
     const cartItemsData = [];
     orders.forEach(order => {
         if (order.cartItems && order.cartItems.length > 0) {
@@ -459,48 +512,44 @@ function exportToExcel() {
     });
 
     const wb = XLSX.utils.book_new();
-    
-    // Add orders sheet with cart items summary
+
     const ordersWS = XLSX.utils.json_to_sheet(ordersData);
-    
-    // Auto-size columns for better readability
+
     const ordersRange = XLSX.utils.decode_range(ordersWS['!ref']);
     const ordersColWidths = [];
     for (let C = ordersRange.s.c; C <= ordersRange.e.c; ++C) {
         let maxWidth = 10;
         for (let R = ordersRange.s.r; R <= ordersRange.e.r; ++R) {
-            const cell = ordersWS[XLSX.utils.encode_cell({r: R, c: C})];
+            const cell = ordersWS[XLSX.utils.encode_cell({ r: R, c: C })];
             if (cell && cell.v) {
                 const cellLength = cell.v.toString().length;
                 maxWidth = Math.max(maxWidth, Math.min(cellLength + 2, 50));
             }
         }
-        ordersColWidths.push({wch: maxWidth});
+        ordersColWidths.push({ wch: maxWidth });
     }
     ordersWS['!cols'] = ordersColWidths;
-    
+
     XLSX.utils.book_append_sheet(wb, ordersWS, 'Orders Summary');
-    
-    // Add detailed cart items sheet
+
     if (cartItemsData.length > 0) {
         const cartItemsWS = XLSX.utils.json_to_sheet(cartItemsData);
-        
-        // Auto-size columns for cart items sheet
+
         const cartRange = XLSX.utils.decode_range(cartItemsWS['!ref']);
         const cartColWidths = [];
         for (let C = cartRange.s.c; C <= cartRange.e.c; ++C) {
             let maxWidth = 10;
             for (let R = cartRange.s.r; R <= cartRange.e.r; ++R) {
-                const cell = cartItemsWS[XLSX.utils.encode_cell({r: R, c: C})];
+                const cell = cartItemsWS[XLSX.utils.encode_cell({ r: R, c: C })];
                 if (cell && cell.v) {
                     const cellLength = cell.v.toString().length;
                     maxWidth = Math.max(maxWidth, Math.min(cellLength + 2, 40));
                 }
             }
-            cartColWidths.push({wch: maxWidth});
+            cartColWidths.push({ wch: maxWidth });
         }
         cartItemsWS['!cols'] = cartColWidths;
-        
+
         XLSX.utils.book_append_sheet(wb, cartItemsWS, 'Detailed Cart Items');
     }
 
